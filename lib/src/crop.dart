@@ -187,13 +187,16 @@ class _CropEditorState extends State<_CropEditor> {
   late Rect _rect;
   image.Image? _targetImage;
   late Rect _imageRect;
+  late imageSizeGetter.Size _imageSize;
 
   double? _aspectRatio;
   bool _withCircleUi = false;
   bool _isFitVertically = false;
   Future<image.Image?>? _lastComputed;
+  Future<imageSizeGetter.Size>? _lastComputedSize;
 
   bool get _isImageLoading => _lastComputed != null;
+  bool get _isImageSizeLoading => _lastComputedSize != null;
 
   _Calculator get calculator => _isFitVertically
       ? const _VerticalCalculator()
@@ -250,7 +253,7 @@ class _CropEditorState extends State<_CropEditor> {
   }) {
     late double baseHeight;
     late double baseWidth;
-    final ratio = _targetImage!.height / _targetImage!.width;
+    final ratio = _imageSize.height / _imageSize.width;
 
     if (_isFitVertically) {
       baseHeight = MediaQuery.of(context).size.height;
@@ -328,15 +331,29 @@ class _CropEditorState extends State<_CropEditor> {
       if (_lastComputed == future) {
         _targetImage = converted;
         _withCircleUi = widget.withCircleUi;
-        _resetCroppingArea();
-
         setState(() {
           _lastComputed = null;
         });
         widget.onStatusChanged?.call(CropStatus.ready);
       }
     });
+    _getSize();
     super.didChangeDependencies();
+  }
+
+  void _getSize() {
+    final futureSize = compute(_getSizeFromUin8List, widget.image);
+    _lastComputedSize = futureSize;
+    futureSize.then((size) {
+      if (_lastComputedSize == futureSize) {
+        setState(() {
+          // keep it like image data
+          _imageSize = size.needRotate ? imageSizeGetter.Size(size.height, size.width) : size;
+          _lastComputedSize = null;
+        });
+        _resetCroppingArea();
+      }
+    });
   }
 
   /// reset image to be cropped
@@ -354,13 +371,14 @@ class _CropEditorState extends State<_CropEditor> {
         widget.onStatusChanged?.call(CropStatus.ready);
       }
     });
+    _getSize();
   }
 
   /// reset [Rect] of cropping area with current state
   void _resetCroppingArea() {
     final screenSize = MediaQuery.of(context).size;
 
-    final imageRatio = _targetImage!.width / _targetImage!.height;
+    final imageRatio = _imageSize.width / _imageSize.height;
     _isFitVertically = imageRatio < screenSize.aspectRatio;
 
     _imageRect = calculator.imageRect(screenSize, imageRatio);
@@ -395,7 +413,7 @@ class _CropEditorState extends State<_CropEditor> {
       );
     } else {
       final screenSizeRatio = calculator.screenSizeRatio(
-        _targetImage!,
+        _imageSize,
         MediaQuery.of(context).size,
       );
       rect = Rect.fromLTWH(
@@ -408,11 +426,15 @@ class _CropEditorState extends State<_CropEditor> {
   }
 
   /// crop given image with given area.
-  Future<void> _crop(bool withCircleShape, { int compressLevel = 0 }) async {
-    assert(_targetImage != null);
+  Future<void> _crop(bool withCircleShape, {int compressLevel = 0}) async {
+    assert(_targetImage != null || _lastComputed != null);
+
+    if (_targetImage == null && _lastComputed != null) {
+      await _lastComputed;
+    }
 
     final screenSizeRatio = calculator.screenSizeRatio(
-      _targetImage!,
+      _imageSize,
       MediaQuery.of(context).size,
     );
 
@@ -439,7 +461,7 @@ class _CropEditorState extends State<_CropEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return _isImageLoading
+    return _isImageSizeLoading
         ? Center(child: const CircularProgressIndicator())
         : Stack(
             children: [
@@ -733,4 +755,10 @@ image.Image _fromByteData(Uint8List data) {
       return image.copyRotate(tempImage!, -90);
   }
   return tempImage!;
+}
+
+imageSizeGetter.Size _getSizeFromUin8List(Uint8List data) {
+  final size = imageSizeGetter.ImageSizeGetter.getSize(
+      imageSizeGetter.MemoryInput(data));
+  return size;
 }
