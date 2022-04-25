@@ -8,7 +8,7 @@ class CropController {
   set delegate(CropControllerDelegate value) => _delegate = value;
 
   /// crop given image with current configuration
-  void crop({ int compressLevel = 0 }) => _delegate.onCrop(false, compressLevel: compressLevel);
+  void crop({ int quality = 0 }) => _delegate.onCrop(false, quality: quality);
 
   /// crop given image with current configuration and circle shape.
   void cropCircle() => _delegate.onCrop(true);
@@ -37,7 +37,7 @@ class CropController {
 class CropControllerDelegate {
   /// callback that [CropController.crop] is called.
   /// the meaning of the value is if cropping a image with circle shape.
-  late void Function(bool, {int compressLevel}) onCrop;
+  late void Function(bool, {int quality}) onCrop;
 
   /// callback that [CropController.image] is set.
   late ValueChanged<Uint8List> onImageChanged;

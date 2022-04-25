@@ -426,7 +426,7 @@ class _CropEditorState extends State<_CropEditor> {
   }
 
   /// crop given image with given area.
-  Future<void> _crop(bool withCircleShape, {int compressLevel = 0}) async {
+  Future<void> _crop(bool withCircleShape, {int quality = 100}) async {
     assert(_targetImage != null || _lastComputed != null);
 
     if (_targetImage == null && _lastComputed != null) {
@@ -451,7 +451,7 @@ class _CropEditorState extends State<_CropEditor> {
           _rect.width * screenSizeRatio / _scale,
           _rect.height * screenSizeRatio / _scale,
         ),
-        compressLevel,
+        quality,
       ],
     );
     widget.onCropped(cropResult);
@@ -706,9 +706,9 @@ class DotControl extends StatelessWidget {
 Uint8List _doCrop(List<dynamic> cropData) {
   final originalImage = cropData[0] as image.Image;
   final rect = cropData[1] as Rect;
-  final compressLevel = cropData[2] as int;
+  final quality = cropData[2] as int;
   return Uint8List.fromList(
-    image.encodePng(
+    image.encodeJpg(
       image.copyCrop(
         originalImage,
         rect.left.toInt(),
@@ -716,7 +716,7 @@ Uint8List _doCrop(List<dynamic> cropData) {
         rect.width.toInt(),
         rect.height.toInt(),
       ),
-      level: compressLevel,
+      quality: quality,
     ),
   );
 }
@@ -726,16 +726,16 @@ Uint8List _doCrop(List<dynamic> cropData) {
 Uint8List _doCropCircle(List<dynamic> cropData) {
   final originalImage = cropData[0] as image.Image;
   final rect = cropData[1] as Rect;
-  final compressLevel = cropData[2] as int;
+  final quality = cropData[2] as int;
   return Uint8List.fromList(
-    image.encodePng(
+    image.encodeJpg(
       image.copyCropCircle(
         originalImage,
         center:
             image.Point(rect.left + rect.width / 2, rect.top + rect.height / 2),
         radius: min(rect.width, rect.height) ~/ 2,
       ),
-      level: compressLevel,
+      quality: quality,
     ),
   );
 }
